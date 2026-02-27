@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PartSync</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+    <div class="app">
+        <header class="header">
+            <div class="logo">
+                <span class="logo-icon">⚡</span>
+                <span class="logo-text">PartSync</span>
+            </div>
+            <span class="version">v1.0.0</span>
+        </header>
+
+        <div class="projects" id="projectList">
+            <div class="empty-state" id="emptyState">
+                <p class="empty-icon">📂</p>
+                <p>No projects yet</p>
+                <p class="empty-hint">Click "Add Project" to start syncing</p>
+            </div>
+        </div>
+
+        <div class="actions">
+            <button class="btn btn-primary" id="addProject">
+                <span>➕</span> Add Project
+            </button>
+            <button class="btn btn-ghost" id="openDashboard">
+                <span>🌐</span> Dashboard
+            </button>
+        </div>
+
+        <footer class="footer">
+            <button class="btn-link" id="quit">Quit PartSync</button>
+        </footer>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+
+</html>

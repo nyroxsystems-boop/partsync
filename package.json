@@ -6,16 +6,19 @@
   "workspaces": [
     "packages/shared",
     "packages/server",
-    "packages/cli"
+    "packages/cli",
+    "packages/desktop"
   ],
   "scripts": {
     "build": "npm run build:shared && npm run build:server && npm run build:cli",
     "build:shared": "cd packages/shared && npx tsc",
     "build:server": "cd packages/server && npx tsc",
     "build:cli": "cd packages/cli && npx tsc",
+    "build:desktop": "cd packages/desktop && npx tsc",
     "start": "node packages/server/dist/index.js",
     "dev:server": "cd packages/server && npx ts-node src/index.ts",
-    "dev:cli": "cd packages/cli && npx ts-node src/index.ts"
+    "dev:cli": "cd packages/cli && npx ts-node src/index.ts",
+    "pack:mac": "cd packages/desktop && npx electron-builder --mac"
   },
   "author": "NyroxSystems",
   "license": "MIT",
