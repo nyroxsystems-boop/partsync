@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PartSync Dashboard</title>
+  <meta name="description" content="Real-time file sync dashboard for agent-first developer teams">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="app">
+    <!-- Header -->
+    <header class="header">
+      <div class="header-left">
+        <div class="logo">
+          <span class="logo-icon">⚡</span>
+          <span class="logo-text">PartSync</span>
+        </div>
+        <span class="version-badge">v1.0.0</span>
+      </div>
+      <div class="header-right">
+        <div class="status-indicator" id="connectionStatus">
+          <span class="status-dot"></span>
+          <span class="status-text">Connecting...</span>
+        </div>
+      </div>
+    </header>
+
+    <!-- Health Bar -->
+    <div class="health-bar" id="healthBar">
+      <div class="health-item">
+        <span class="health-label">Uptime</span>
+        <span class="health-value" id="uptime">—</span>
+      </div>
+      <div class="health-item">
+        <span class="health-label">Clients</span>
+        <span class="health-value" id="clientCount">0</span>
+      </div>
+      <div class="health-item">
+        <span class="health-label">Total Diffs</span>
+        <span class="health-value" id="totalDiffs">0</span>
+      </div>
+      <div class="health-item">
+        <span class="health-label">Tracked Files</span>
+        <span class="health-value" id="totalFiles">0</span>
+      </div>
+      <div class="health-item">
+        <span class="health-label">DB Size</span>
+        <span class="health-value" id="dbSize">0 KB</span>
+      </div>
+    </div>
+
+    <!-- Main Grid -->
+    <main class="grid">
+      <!-- Active Agents -->
+      <section class="card" id="agentsCard">
+        <div class="card-header">
+          <h2>👥 Active Agents</h2>
+          <span class="badge" id="agentsBadge">0</span>
+        </div>
+        <div class="card-body" id="agentsList">
+          <div class="empty-state">No agents connected</div>
+        </div>
+      </section>
+
+      <!-- File Locks -->
+      <section class="card" id="locksCard">
+        <div class="card-header">
+          <h2>🔒 File Locks</h2>
+          <span class="badge" id="locksBadge">0</span>
+        </div>
+        <div class="card-body" id="locksList">
+          <div class="empty-state">No active locks</div>
+        </div>
+      </section>
+
+      <!-- Live Change Feed -->
+      <section class="card card-wide" id="feedCard">
+        <div class="card-header">
+          <h2>📡 Live Change Feed</h2>
+          <span class="badge" id="feedBadge">0</span>
+        </div>
+        <div class="card-body feed-body" id="feedList">
+          <div class="empty-state">Waiting for changes...</div>
+        </div>
+      </section>
+
+      <!-- Conflict Alerts -->
+      <section class="card" id="conflictsCard">
+        <div class="card-header">
+          <h2>⚠️ Conflicts</h2>
+          <span class="badge badge-warn" id="conflictsBadge">0</span>
+        </div>
+        <div class="card-body" id="conflictsList">
+          <div class="empty-state">No conflicts — all clear!</div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,25 @@
+{
+  "name": "partsync",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Real-time diff-based file sync for agent-first developer teams",
+  "workspaces": [
+    "packages/shared",
+    "packages/server",
+    "packages/cli"
+  ],
+  "scripts": {
+    "build": "npm run build:shared && npm run build:server && npm run build:cli",
+    "build:shared": "cd packages/shared && npx tsc",
+    "build:server": "cd packages/server && npx tsc",
+    "build:cli": "cd packages/cli && npx tsc",
+    "start": "node packages/server/dist/index.js",
+    "dev:server": "cd packages/server && npx ts-node src/index.ts",
+    "dev:cli": "cd packages/cli && npx ts-node src/index.ts"
+  },
+  "author": "NyroxSystems",
+  "license": "MIT",
+  "devDependencies": {
+    "@types/node": "^20.0.0"
+  }
+}
