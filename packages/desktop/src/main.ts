@@ -1,20 +1,37 @@
 // ─── PartSync Desktop: Electron Main Process ─────────────────────────────────
 
-import { app, ipcMain, dialog, Notification } from 'electron';
+// Catch uncaught errors
+process.on('uncaughtException', (err) => {
+    console.error(`[PartSync] UNCAUGHT: ${err.stack || err.message || err}`);
+});
+process.on('unhandledRejection', (reason) => {
+    console.error(`[PartSync] UNHANDLED REJECTION: ${reason}`);
+});
+
+import { app, ipcMain, dialog, Notification, BrowserWindow } from 'electron';
 import crypto from 'crypto';
 import { createTray, showPopup } from './tray';
 import * as projectManager from './projectManager';
 import * as storeModule from './store';
 
+// ─── Prevent app from quitting when all windows close (menu bar app) ────────
+app.on('window-all-closed', () => {
+    // Do NOT quit — we are a menu bar app, we stay alive via the tray icon
+});
+
 // ─── Single Instance Lock ────────────────────────────────────────────────────
 const gotTheLock = app.requestSingleInstanceLock();
 if (!gotTheLock) {
     app.quit();
+} else {
+    app.on('second-instance', () => {
+        showPopup();
+    });
 }
 
 // ─── App Lifecycle ───────────────────────────────────────────────────────────
 
-app.on('ready', () => {
+app.whenReady().then(() => {
     // Hide dock icon (menu bar app only)
     if (app.dock) app.dock.hide();
 
@@ -31,18 +48,18 @@ app.on('ready', () => {
 
     // Show welcome notification + open popup on first launch
     if (projects.length === 0) {
-        new Notification({
-            title: '⚡ PartSync',
-            body: 'Click the menu bar icon to set up your first project!',
-        }).show();
-        // Auto-open popup on first launch so user sees the onboarding
-        setTimeout(() => showPopup(), 500);
+        try {
+            new Notification({
+                title: '⚡ PartSync',
+                body: 'Click the menu bar icon to set up your first project!',
+            }).show();
+        } catch (e) {
+            console.log('[PartSync] Notification not available:', e);
+        }
+        setTimeout(() => showPopup(), 800);
     }
 
     console.log(`[PartSync] Desktop app ready, ${projects.length} projects configured`);
-});
-
-app.on('window-all-closed', () => {
 });
 
 app.on('before-quit', () => {
@@ -75,10 +92,8 @@ ipcMain.handle('save-new-project', (_event, config: {
     serverUrl: string;
     clientName: string;
 }) => {
-    // Save client name
     storeModule.setClientName(config.clientName);
 
-    // Create project config
     const project: storeModule.ProjectConfig = {
         id: crypto.randomUUID(),
         name: config.name,
@@ -92,10 +107,12 @@ ipcMain.handle('save-new-project', (_event, config: {
     storeModule.addProject(project);
     projectManager.startProject(project);
 
-    new Notification({
-        title: '⚡ PartSync',
-        body: `Project "${config.name}" is now syncing!`,
-    }).show();
+    try {
+        new Notification({
+            title: '⚡ PartSync',
+            body: `Project "${config.name}" is now syncing!`,
+        }).show();
+    } catch (e) { /* notifications may not be available */ }
 
     return { success: true, project };
 });
