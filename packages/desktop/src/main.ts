@@ -42,9 +42,7 @@ app.on('ready', () => {
     console.log(`[PartSync] Desktop app ready, ${projects.length} projects configured`);
 });
 
-app.on('window-all-closed', (e: Event) => {
-    // Prevent app from quitting when windows close (we're a menu bar app)
-    e.preventDefault();
+app.on('window-all-closed', () => {
 });
 
 app.on('before-quit', () => {
