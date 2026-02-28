@@ -2,6 +2,7 @@
     "name": "@partsync/desktop",
     "version": "1.0.0",
     "description": "PartSync Mac Menu Bar App",
+    "author": "NyroxSystems",
     "main": "dist/main.js",
     "scripts": {
         "build": "tsc",
@@ -21,7 +22,7 @@
     "devDependencies": {
         "@types/auto-launch": "^5.0.5",
         "@types/diff-match-patch": "^1.0.0",
-        "electron": "^28.0.0",
+        "electron": "28.0.0",
         "electron-builder": "^24.0.0",
         "typescript": "^5.3.0"
     },

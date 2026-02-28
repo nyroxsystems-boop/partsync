@@ -1,8 +1,7 @@
 // ─── PartSync Desktop: Tray Manager ──────────────────────────────────────────
 
-import { app, Tray, Menu, nativeImage, BrowserWindow, dialog, Notification } from 'electron';
+import { app, Tray, Menu, nativeImage, BrowserWindow } from 'electron';
 import path from 'path';
-import crypto from 'crypto';
 import { ProjectStatus } from './projectManager';
 import * as projectManager from './projectManager';
 import * as store from './store';
@@ -11,7 +10,6 @@ let tray: Tray | null = null;
 let popupWindow: BrowserWindow | null = null;
 
 export function createTray(): Tray {
-    // Create a simple tray icon (colored circle)
     const icon = createTrayIcon('idle');
     tray = new Tray(icon);
     tray.setToolTip('PartSync — File Sync');
@@ -36,6 +34,14 @@ export function createTray(): Tray {
     return tray;
 }
 
+export function showPopup(): void {
+    if (popupWindow && !popupWindow.isDestroyed()) {
+        popupWindow.focus();
+        return;
+    }
+    togglePopup();
+}
+
 function updateTrayIcon(statuses: ProjectStatus[]): void {
     if (!tray) return;
 
@@ -52,7 +58,7 @@ function updateTrayIcon(statuses: ProjectStatus[]): void {
     tray.setImage(createTrayIcon(state));
 }
 
-function createTrayIcon(state: 'idle' | 'syncing' | 'connected' | 'error'): nativeImage {
+function createTrayIcon(state: 'idle' | 'syncing' | 'connected' | 'error'): Electron.NativeImage {
     const colors: Record<string, string> = {
         idle: '#6B7280',
         syncing: '#F59E0B',
@@ -60,7 +66,6 @@ function createTrayIcon(state: 'idle' | 'syncing' | 'connected' | 'error'): nati
         error: '#EF4444',
     };
 
-    // Create a 32x32 icon with a colored circle
     const size = 32;
     const canvas = `
     <svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" xmlns="http://www.w3.org/2000/svg">
@@ -94,15 +99,30 @@ function updateTrayMenu(statuses: ProjectStatus[]): void {
         { type: 'separator' },
         {
             label: '➕ Add Project...',
-            click: () => addProjectDialog(),
+            click: () => {
+                showPopup();
+                // Tell the renderer to show the add-project form
+                setTimeout(() => {
+                    if (popupWindow && !popupWindow.isDestroyed()) {
+                        popupWindow.webContents.send('show-add-project');
+                    }
+                }, 300);
+            },
         },
         {
             label: '🌐 Open Dashboard',
-            click: () => openDashboard(statuses),
+            click: () => {
+                const projects = store.getProjects();
+                const serverUrl = projects.length > 0
+                    ? projects[0]?.serverUrl || 'https://partsyncserver-production.up.railway.app'
+                    : 'https://partsyncserver-production.up.railway.app';
+                const { shell } = require('electron');
+                shell.openExternal(serverUrl);
+            },
         },
         { type: 'separator' },
         {
-            label: '⚙️ Settings',
+            label: '⚙️ Open PartSync',
             click: () => togglePopup(),
         },
         {
@@ -118,49 +138,6 @@ function updateTrayMenu(statuses: ProjectStatus[]): void {
     tray.setContextMenu(contextMenu);
 }
 
-async function addProjectDialog(): Promise<void> {
-    const result = await dialog.showOpenDialog({
-        title: 'Select Project Folder',
-        properties: ['openDirectory'],
-        message: 'Choose the project folder to sync',
-    });
-
-    if (result.canceled || result.filePaths.length === 0) return;
-
-    const localPath = result.filePaths[0];
-    const name = path.basename(localPath);
-
-    // Ask for server URL
-    const serverUrl = 'https://partsyncserver-production.up.railway.app';
-
-    const project: store.ProjectConfig = {
-        id: crypto.randomUUID(),
-        name,
-        localPath,
-        serverUrl,
-        token: crypto.randomBytes(16).toString('hex'),
-        enabled: true,
-        ignorePatterns: [],
-    };
-
-    store.addProject(project);
-    projectManager.startProject(project);
-
-    new Notification({
-        title: 'PartSync',
-        body: `Project "${name}" added and syncing!`,
-    }).show();
-}
-
-function openDashboard(statuses: ProjectStatus[]): void {
-    const serverUrl = statuses.length > 0
-        ? store.getProjects()[0]?.serverUrl || 'https://partsyncserver-production.up.railway.app'
-        : 'https://partsyncserver-production.up.railway.app';
-
-    const { shell } = require('electron');
-    shell.openExternal(serverUrl);
-}
-
 function togglePopup(): void {
     if (popupWindow && !popupWindow.isDestroyed()) {
         popupWindow.close();
@@ -169,8 +146,8 @@ function togglePopup(): void {
     }
 
     popupWindow = new BrowserWindow({
-        width: 380,
-        height: 500,
+        width: 400,
+        height: 560,
         show: false,
         frame: false,
         resizable: false,

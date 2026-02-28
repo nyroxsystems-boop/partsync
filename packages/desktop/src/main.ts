@@ -1,7 +1,8 @@
 // ─── PartSync Desktop: Electron Main Process ─────────────────────────────────
 
-import { app, ipcMain, Notification } from 'electron';
-import { createTray } from './tray';
+import { app, ipcMain, dialog, Notification } from 'electron';
+import crypto from 'crypto';
+import { createTray, showPopup } from './tray';
 import * as projectManager from './projectManager';
 import * as storeModule from './store';
 
@@ -28,12 +29,14 @@ app.on('ready', () => {
         }
     }
 
-    // Show welcome notification on first launch
+    // Show welcome notification + open popup on first launch
     if (projects.length === 0) {
         new Notification({
             title: '⚡ PartSync',
-            body: 'Click the menu bar icon to add your first project!',
+            body: 'Click the menu bar icon to set up your first project!',
         }).show();
+        // Auto-open popup on first launch so user sees the onboarding
+        setTimeout(() => showPopup(), 500);
     }
 
     console.log(`[PartSync] Desktop app ready, ${projects.length} projects configured`);
@@ -58,9 +61,45 @@ ipcMain.handle('get-config', () => {
     };
 });
 
-ipcMain.handle('add-project', async () => {
-    // This is handled by the tray's addProjectDialog
-    return true;
+ipcMain.handle('select-folder', async () => {
+    const result = await dialog.showOpenDialog({
+        title: 'Select Project Folder',
+        properties: ['openDirectory'],
+        message: 'Choose the project folder to sync',
+    });
+    if (result.canceled || result.filePaths.length === 0) return null;
+    return result.filePaths[0];
+});
+
+ipcMain.handle('save-new-project', (_event, config: {
+    name: string;
+    localPath: string;
+    serverUrl: string;
+    clientName: string;
+}) => {
+    // Save client name
+    storeModule.setClientName(config.clientName);
+
+    // Create project config
+    const project: storeModule.ProjectConfig = {
+        id: crypto.randomUUID(),
+        name: config.name,
+        localPath: config.localPath,
+        serverUrl: config.serverUrl,
+        token: crypto.randomBytes(16).toString('hex'),
+        enabled: true,
+        ignorePatterns: [],
+    };
+
+    storeModule.addProject(project);
+    projectManager.startProject(project);
+
+    new Notification({
+        title: '⚡ PartSync',
+        body: `Project "${config.name}" is now syncing!`,
+    }).show();
+
+    return { success: true, project };
 });
 
 ipcMain.handle('remove-project', (_event, id: string) => {

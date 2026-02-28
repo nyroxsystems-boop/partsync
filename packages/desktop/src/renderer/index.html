@@ -14,34 +14,121 @@
 
 <body>
     <div class="app">
+        <!-- ─── Header ─────────────────────────────────────────────── -->
         <header class="header">
             <div class="logo">
                 <span class="logo-icon">⚡</span>
                 <span class="logo-text">PartSync</span>
             </div>
-            <span class="version">v1.0.0</span>
+            <div class="header-right">
+                <span class="connection-badge" id="connectionBadge">
+                    <span class="conn-dot"></span>
+                    <span id="connLabel">Offline</span>
+                </span>
+            </div>
         </header>
 
-        <div class="projects" id="projectList">
-            <div class="empty-state" id="emptyState">
-                <p class="empty-icon">📂</p>
-                <p>No projects yet</p>
-                <p class="empty-hint">Click "Add Project" to start syncing</p>
+        <!-- ─── View: Project List ─────────────────────────────────── -->
+        <div class="view" id="viewList">
+            <!-- Client name bar -->
+            <div class="client-bar" id="clientBar">
+                <span class="client-label">👤</span>
+                <span class="client-name" id="clientNameDisplay">Loading...</span>
+                <button class="btn-icon" id="editNameBtn" title="Edit name">✏️</button>
             </div>
+
+            <!-- Projects -->
+            <div class="projects" id="projectList">
+                <div class="empty-state" id="emptyState">
+                    <div class="empty-icon">📂</div>
+                    <p class="empty-title">No projects yet</p>
+                    <p class="empty-hint">Add a project folder to start syncing<br>with your team in real time.</p>
+                    <button class="btn btn-primary btn-large" id="emptyAddBtn">
+                        <span>➕</span> Add Your First Project
+                    </button>
+                </div>
+            </div>
+
+            <!-- Actions -->
+            <div class="actions" id="actionBar">
+                <button class="btn btn-primary" id="addProject">
+                    <span>➕</span> Add Project
+                </button>
+                <button class="btn btn-ghost" id="openDashboard">
+                    <span>🌐</span> Dashboard
+                </button>
+            </div>
+
+            <footer class="footer">
+                <button class="btn-link" id="quit">Quit PartSync</button>
+            </footer>
         </div>
 
-        <div class="actions">
-            <button class="btn btn-primary" id="addProject">
-                <span>➕</span> Add Project
-            </button>
-            <button class="btn btn-ghost" id="openDashboard">
-                <span>🌐</span> Dashboard
-            </button>
+        <!-- ─── View: Add/Edit Project ─────────────────────────────── -->
+        <div class="view hidden" id="viewAddProject">
+            <div class="form-header">
+                <button class="btn-back" id="backBtn">← Back</button>
+                <h2 class="form-title">New Project</h2>
+            </div>
+
+            <form class="form" id="addProjectForm">
+                <!-- Your Name -->
+                <div class="form-group">
+                    <label class="form-label" for="inputName">Your Name</label>
+                    <input class="form-input" type="text" id="inputName"
+                        placeholder="e.g. Aaron" required>
+                    <span class="form-hint">Other people will see this name</span>
+                </div>
+
+                <!-- Project Name -->
+                <div class="form-group">
+                    <label class="form-label" for="inputProjectName">Project Name</label>
+                    <input class="form-input" type="text" id="inputProjectName"
+                        placeholder="e.g. my-app" required>
+                </div>
+
+                <!-- Folder Picker -->
+                <div class="form-group">
+                    <label class="form-label">Project Folder</label>
+                    <div class="folder-picker">
+                        <button type="button" class="btn btn-ghost btn-folder" id="pickFolderBtn">
+                            📁 Choose Folder...
+                        </button>
+                        <div class="folder-path" id="folderPath">No folder selected</div>
+                    </div>
+                </div>
+
+                <!-- Server URL -->
+                <div class="form-group">
+                    <label class="form-label" for="inputServer">Server URL</label>
+                    <input class="form-input font-mono" type="url" id="inputServer"
+                        value="https://partsyncserver-production.up.railway.app" required>
+                    <span class="form-hint">Leave as-is unless you host your own server</span>
+                </div>
+
+                <!-- Submit -->
+                <button type="submit" class="btn btn-primary btn-large" id="saveProjectBtn">
+                    🚀 Start Syncing
+                </button>
+                <div class="form-error hidden" id="formError"></div>
+            </form>
         </div>
 
-        <footer class="footer">
-            <button class="btn-link" id="quit">Quit PartSync</button>
-        </footer>
+        <!-- ─── View: Edit Name ────────────────────────────────────── -->
+        <div class="view hidden" id="viewEditName">
+            <div class="form-header">
+                <button class="btn-back" id="backFromNameBtn">← Back</button>
+                <h2 class="form-title">Your Name</h2>
+            </div>
+            <form class="form" id="editNameForm">
+                <div class="form-group">
+                    <label class="form-label" for="editNameInput">Display Name</label>
+                    <input class="form-input" type="text" id="editNameInput" placeholder="Your name" required>
+                    <span class="form-hint">This is how your teammates see you</span>
+                </div>
+                <button type="submit" class="btn btn-primary btn-large">💾 Save</button>
+            </form>
+        </div>
     </div>
 
     <script src="app.js"></script>
