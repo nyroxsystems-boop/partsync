@@ -14,6 +14,7 @@ export interface FileDiff {
     version: string;           // SHA-256 hash of file after patch
     previousVersion: string;   // SHA-256 hash of file before patch
     compressed?: boolean;
+    fullContent?: string;      // Full file content for fallback reconstruction
 }
 
 export interface LockState {

@@ -206,8 +206,20 @@ function handleIncomingDiff(diff: FileDiff): void {
     try {
         // Read current file content
         let currentContent = '';
-        if (fs.existsSync(fullPath)) {
+        const fileExists = fs.existsSync(fullPath);
+        if (fileExists) {
             currentContent = fs.readFileSync(fullPath, 'utf8');
+        }
+
+        // If file doesn't exist and we have fullContent, just write it directly
+        if (!fileExists && diff.fullContent) {
+            const dir = path.dirname(fullPath);
+            if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+            fs.writeFileSync(fullPath, diff.fullContent, 'utf8');
+            fileVersions[diff.file] = diff.version;
+            const typeIcon = diff.type === 'ai' ? '🤖' : '👤';
+            console.log(chalk.gray(`  ${typeIcon} Synced (new): ${diff.file} (${diff.author})`));
+            return;
         }
 
         // Apply the patch
@@ -221,13 +233,20 @@ function handleIncomingDiff(diff: FileDiff): void {
 
             const typeIcon = diff.type === 'ai' ? '🤖' : '👤';
             console.log(chalk.gray(`  ${typeIcon} Synced: ${diff.file} (${diff.author})`));
+        } else if (diff.fullContent) {
+            // Patch failed — use fullContent fallback
+            const dir = path.dirname(fullPath);
+            if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+            fs.writeFileSync(fullPath, diff.fullContent, 'utf8');
+            fileVersions[diff.file] = diff.version;
+            console.log(chalk.yellow(`  ⚠️  Patch failed for ${diff.file} — used full content fallback`));
         } else {
-            console.log(chalk.yellow(`  ⚠️  Patch partially applied for ${diff.file}`));
-            // Still write the result, as partial application is better than nothing
+            // Patch failed and no fullContent — write whatever we got
             const dir = path.dirname(fullPath);
             if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
             fs.writeFileSync(fullPath, result, 'utf8');
             fileVersions[diff.file] = hashContent(result);
+            console.log(chalk.yellow(`  ⚠️  Patch partially applied for ${diff.file} (no fallback)`));
         }
     } catch (err) {
         console.log(chalk.red(`  ❌ Failed to apply diff for ${diff.file}: ${(err as Error).message}`));

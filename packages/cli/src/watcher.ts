@@ -145,6 +145,7 @@ function processFileChange(filepath: string, relPath: string, clientName: string
             timestamp: Date.now(),
             version: newHash,
             previousVersion: oldHash,
+            fullContent: newContent,  // Include full content for receivers who don't have the file
         };
 
         // Emit edit lock
