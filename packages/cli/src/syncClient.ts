@@ -147,6 +147,15 @@ export function sendDelete(file: string): void {
 }
 
 /**
+ * Send a full file to the server (for new files or when diff fails).
+ */
+export function sendFullFile(file: string, content: string, hash: string): void {
+    if (!socket || !socket.connected) return;
+    socket.emit('sync:full-file', { file, content, hash });
+    fileVersions[file] = hash;
+}
+
+/**
  * Perform sync handshake on (re)connect.
  */
 function performHandshake(): void {

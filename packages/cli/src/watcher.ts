@@ -11,13 +11,14 @@ import {
     FileDiff,
 } from '@partsync/shared';
 import { createPatch, hashContent, hasActualChanges } from './diffEngine';
-import { sendDiff, sendDelete, getFileVersion, setFileVersion, isApplyingIncoming } from './syncClient';
+import { sendDiff, sendDelete, sendFullFile, getFileVersion, setFileVersion, isApplyingIncoming } from './syncClient';
 import { emitEditLock } from './lockClient';
 import { recordWrite, getAuthorType, getCurrentDebounce } from './agentDetector';
 
 let watcher: chokidar.FSWatcher | null = null;
 const fileContents = new Map<string, string>();
 const debounceTimers = new Map<string, NodeJS.Timeout>();
+let watcherReady = false;
 
 /**
  * Start watching a project directory for file changes.
@@ -44,13 +45,22 @@ export function startWatcher(
         },
     });
 
-    // ── Initial scan: cache file contents & hashes ─────────────────────────
+    // ── File add: cache + send full file if watcher is already running ─────
     watcher.on('add', (filepath) => {
+        if (isApplyingIncoming()) return;
         try {
             const content = fs.readFileSync(filepath, 'utf8');
             const relPath = path.relative(projectDir, filepath);
             fileContents.set(relPath, content);
-            setFileVersion(relPath, hashContent(content));
+            const hash = hashContent(content);
+            setFileVersion(relPath, hash);
+
+            // If watcher is already running (past initial scan), this is a NEW file
+            // Send the full file content so other clients can create it
+            if (watcherReady) {
+                sendFullFile(relPath, content, hash);
+                console.log(chalk.cyan(`  📄 ${relPath} → new file synced`));
+            }
         } catch {
             // Binary file or read error — skip
         }
@@ -88,6 +98,7 @@ export function startWatcher(
     });
 
     watcher.on('ready', () => {
+        watcherReady = true;
         const count = fileContents.size;
         console.log(chalk.green(`  ✅ Initial scan complete: ${count} files tracked`));
     });
@@ -112,6 +123,15 @@ function processFileChange(filepath: string, relPath: string, clientName: string
 
         const oldHash = hashContent(oldContent);
         const newHash = hashContent(newContent);
+
+        // If no old content exists (file was not previously tracked), send full file
+        if (!oldContent || oldContent === '') {
+            sendFullFile(relPath, newContent, newHash);
+            fileContents.set(relPath, newContent);
+            console.log(chalk.cyan(`  📄 ${relPath} → full file synced`));
+            return;
+        }
+
         const patch = createPatch(oldContent, newContent);
 
         // Skip empty patches
