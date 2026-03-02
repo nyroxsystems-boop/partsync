@@ -20,6 +20,8 @@
     const openDashboardBtn = document.getElementById('openDashboard');
     const quitBtn = document.getElementById('quit');
     const editNameBtn = document.getElementById('editNameBtn');
+    const winCloseBtn = document.getElementById('winClose');
+    const winMinimizeBtn = document.getElementById('winMinimize');
     const backBtn = document.getElementById('backBtn');
     const backFromNameBtn = document.getElementById('backFromNameBtn');
     const pickFolderBtn = document.getElementById('pickFolderBtn');
@@ -95,6 +97,15 @@
 
     quitBtn.addEventListener('click', () => {
         window.partsync.quit();
+    });
+
+    // ── Window Controls ──────────────────────────────────────────────────
+    winCloseBtn.addEventListener('click', () => {
+        window.partsync.closeWindow();
+    });
+
+    winMinimizeBtn.addEventListener('click', () => {
+        window.partsync.minimizeWindow();
     });
 
     // ── Folder Picker ────────────────────────────────────────────────────

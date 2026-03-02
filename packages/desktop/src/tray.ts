@@ -146,14 +146,20 @@ function togglePopup(): void {
     }
 
     popupWindow = new BrowserWindow({
-        width: 400,
-        height: 560,
+        width: 420,
+        height: 580,
+        minWidth: 360,
+        minHeight: 400,
+        maxWidth: 800,
+        maxHeight: 900,
         show: false,
         frame: false,
-        resizable: false,
+        resizable: true,
         fullscreenable: false,
         transparent: true,
         vibrancy: 'popover',
+        titleBarStyle: 'hidden',
+        trafficLightPosition: { x: -100, y: -100 }, // hide native buttons
         webPreferences: {
             preload: path.join(__dirname, 'preload.js'),
             contextIsolation: true,
@@ -173,10 +179,20 @@ function togglePopup(): void {
     }
 
     popupWindow.show();
-    popupWindow.on('blur', () => {
+
+    // IPC window controls
+    const { ipcMain } = require('electron');
+    ipcMain.removeHandler('close-window');
+    ipcMain.removeHandler('minimize-window');
+    ipcMain.handle('close-window', () => {
         if (popupWindow && !popupWindow.isDestroyed()) {
             popupWindow.close();
             popupWindow = null;
+        }
+    });
+    ipcMain.handle('minimize-window', () => {
+        if (popupWindow && !popupWindow.isDestroyed()) {
+            popupWindow.minimize();
         }
     });
 }

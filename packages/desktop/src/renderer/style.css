@@ -33,20 +33,74 @@ body {
     font-family: var(--font);
     background: var(--bg);
     color: var(--text);
-    -webkit-app-region: drag;
     user-select: none;
     border-radius: var(--radius);
     overflow: hidden;
+}
+
+/* ─── Custom Titlebar ──────────────────────────────────────────────── */
+
+.titlebar {
+    display: flex;
+    align-items: center;
+    height: 32px;
+    padding: 0 10px;
+    flex-shrink: 0;
+    -webkit-app-region: drag;
+}
+
+.titlebar-controls {
+    display: flex;
+    gap: 7px;
+    -webkit-app-region: no-drag;
+    align-items: center;
+}
+
+.titlebar-btn {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    transition: all 0.15s;
+    color: transparent;
+}
+
+.titlebar-btn.close {
+    background: #ff5f57;
+}
+
+.titlebar-btn.minimize {
+    background: #febc2e;
+}
+
+.titlebar-btn:hover {
+    color: rgba(0, 0, 0, 0.65);
+}
+
+.titlebar-btn:active {
+    filter: brightness(0.85);
+}
+
+.titlebar-drag {
+    flex: 1;
+    height: 100%;
 }
 
 .app {
     display: flex;
     flex-direction: column;
     height: 100vh;
-    padding: 16px;
+    padding: 0 16px 16px 16px;
 }
 
-.hidden { display: none !important; }
+.hidden {
+    display: none !important;
+}
 
 /* ─── Header ────────────────────────────────────────────────────────── */
 
@@ -66,7 +120,9 @@ body {
     font-weight: 700;
 }
 
-.logo-icon { font-size: 18px; }
+.logo-icon {
+    font-size: 18px;
+}
 
 .logo-text {
     background: linear-gradient(135deg, var(--accent-blue), var(--accent-purple));
@@ -122,8 +178,15 @@ body {
 }
 
 @keyframes fadeIn {
-    from { opacity: 0; transform: translateY(4px); }
-    to { opacity: 1; transform: translateY(0); }
+    from {
+        opacity: 0;
+        transform: translateY(4px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
 /* ─── Client Bar ────────────────────────────────────────────────────── */
@@ -141,7 +204,9 @@ body {
     flex-shrink: 0;
 }
 
-.client-label { font-size: 14px; }
+.client-label {
+    font-size: 14px;
+}
 
 .client-name {
     flex: 1;
@@ -249,8 +314,15 @@ body {
 }
 
 @keyframes pulse {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.5; }
+
+    0%,
+    100% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: 0.5;
+    }
 }
 
 .project-meta {
@@ -582,8 +654,15 @@ body {
 /* ─── Animations ────────────────────────────────────────────────────── */
 
 @keyframes slideIn {
-    from { opacity: 0; transform: translateY(8px); }
-    to { opacity: 1; transform: translateY(0); }
+    from {
+        opacity: 0;
+        transform: translateY(8px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
 .project-card {

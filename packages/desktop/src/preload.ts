@@ -27,5 +27,9 @@ contextBridge.exposeInMainWorld('partsync', {
     // Actions
     openDashboard: () => ipcRenderer.invoke('open-dashboard'),
     quit: () => ipcRenderer.invoke('quit'),
+
+    // Window controls
+    closeWindow: () => ipcRenderer.invoke('close-window'),
+    minimizeWindow: () => ipcRenderer.invoke('minimize-window'),
 });
 
