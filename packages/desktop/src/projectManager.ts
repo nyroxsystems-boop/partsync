@@ -17,6 +17,8 @@ import {
     MAX_RECONNECT_ATTEMPTS,
     FileDiff,
     LockState,
+    PeerInfo,
+    ConflictEvent,
     ClientToServerEvents,
     ServerToClientEvents,
     SyncHandshake,
@@ -26,6 +28,17 @@ import { ProjectConfig, getClientName } from './store';
 type TypedSocket = Socket<ServerToClientEvents, ClientToServerEvents>;
 
 const dmp = new DiffMatchPatch();
+
+// ─── Activity Log Entry ──────────────────────────────────────────────────────
+
+export interface ActivityEntry {
+    id: string;
+    type: 'sync' | 'conflict' | 'peer-joined' | 'peer-left' | 'file-deleted' | 'file-renamed';
+    file?: string;
+    author?: string;
+    message: string;
+    timestamp: number;
+}
 
 // ─── Per-Project Sync Instance ───────────────────────────────────────────────
 
@@ -38,6 +51,9 @@ export interface ProjectStatus {
     trackedFiles: number;
     lastSync: number;
     locks: LockState[];
+    peers: PeerInfo[];
+    activityLog: ActivityEntry[];
+    conflicts: ConflictEvent[];
     error?: string;
 }
 
@@ -56,6 +72,8 @@ interface ProjectInstance {
 
 const activeProjects = new Map<string, ProjectInstance>();
 let statusCallback: ((statuses: ProjectStatus[]) => void) | null = null;
+
+const MAX_ACTIVITY_LOG = 50;
 
 // ─── Public API ──────────────────────────────────────────────────────────────
 
@@ -87,6 +105,9 @@ export function startProject(config: ProjectConfig): void {
             trackedFiles: 0,
             lastSync: 0,
             locks: [],
+            peers: [],
+            activityLog: [],
+            conflicts: [],
         },
     };
 
@@ -130,6 +151,22 @@ export function getStatuses(): ProjectStatus[] {
     return Array.from(activeProjects.values()).map(i => ({ ...i.status }));
 }
 
+export function resolveConflict(projectId: string, file: string, resolution: 'accept-mine' | 'accept-theirs'): void {
+    const instance = activeProjects.get(projectId);
+    if (!instance) return;
+
+    instance.socket?.emit('conflict:resolve', { file, resolution });
+
+    // Remove the conflict from the list
+    instance.status.conflicts = instance.status.conflicts.filter(c => c.file !== file);
+    addActivity(instance, {
+        type: 'conflict',
+        file,
+        message: `Conflict resolved: ${resolution === 'accept-mine' ? 'kept your version' : 'accepted theirs'}`,
+    });
+    emitStatuses();
+}
+
 // ─── Socket Connection ──────────────────────────────────────────────────────
 
 function connectProject(instance: ProjectInstance): void {
@@ -151,6 +188,7 @@ function connectProject(instance: ProjectInstance): void {
     instance.socket.on('connect', () => {
         instance.status.connected = true;
         instance.status.error = undefined;
+        addActivity(instance, { type: 'sync', message: 'Connected to server' });
         emitStatuses();
 
         // Perform handshake
@@ -173,6 +211,7 @@ function connectProject(instance: ProjectInstance): void {
 
     instance.socket.on('disconnect', () => {
         instance.status.connected = false;
+        addActivity(instance, { type: 'sync', message: 'Disconnected from server' });
         emitStatuses();
     });
 
@@ -184,6 +223,12 @@ function connectProject(instance: ProjectInstance): void {
 
     instance.socket.on('file:diff', (diff: FileDiff) => {
         applyIncomingDiff(instance, diff);
+        addActivity(instance, {
+            type: 'sync',
+            file: diff.file,
+            author: diff.author,
+            message: `${diff.author} changed ${diff.file}`,
+        });
     });
 
     instance.socket.on('file:lock-changed', (locks: LockState[]) => {
@@ -191,12 +236,15 @@ function connectProject(instance: ProjectInstance): void {
         emitStatuses();
     });
 
-    instance.socket.on('file:conflict', (event) => {
-        // Emit notification to renderer
-        if (statusCallback) {
-            instance.status.error = `Conflict on ${event.file}`;
-            emitStatuses();
-        }
+    instance.socket.on('file:conflict', (event: ConflictEvent) => {
+        instance.status.conflicts.push(event);
+        addActivity(instance, {
+            type: 'conflict',
+            file: event.file,
+            message: `Conflict: ${event.authorA} vs ${event.authorB} on ${event.file}`,
+        });
+        instance.status.error = `Conflict on ${event.file}`;
+        emitStatuses();
     });
 
     instance.socket.on('file:delete', (data) => {
@@ -206,6 +254,12 @@ function connectProject(instance: ProjectInstance): void {
             if (fs.existsSync(fullPath)) fs.unlinkSync(fullPath);
             instance.fileContents.delete(data.file);
             delete instance.fileVersions[data.file];
+            addActivity(instance, {
+                type: 'file-deleted',
+                file: data.file,
+                author: data.author,
+                message: `${data.author} deleted ${data.file}`,
+            });
         } finally {
             setTimeout(() => { instance.applyingIncoming = false; }, 200);
         }
@@ -221,6 +275,12 @@ function connectProject(instance: ProjectInstance): void {
                 if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
                 fs.renameSync(oldPath, newPath);
             }
+            addActivity(instance, {
+                type: 'file-renamed',
+                file: data.newFile,
+                author: data.author,
+                message: `${data.author} renamed ${data.oldFile} → ${data.newFile}`,
+            });
         } finally {
             setTimeout(() => { instance.applyingIncoming = false; }, 200);
         }
@@ -228,6 +288,36 @@ function connectProject(instance: ProjectInstance): void {
 
     instance.socket.on('sync:apply-full-file', (data) => {
         applyFullFile(instance, data.file, data.content);
+    });
+
+    // ── Peers Update ─────────────────────────────────────────────────────
+    instance.socket.on('peers:update', (peers: PeerInfo[]) => {
+        const oldPeerNames = new Set(instance.status.peers.map(p => p.name));
+        const newPeerNames = new Set(peers.map(p => p.name));
+
+        // Detect joins
+        for (const p of peers) {
+            if (!oldPeerNames.has(p.name) && p.name !== clientName) {
+                addActivity(instance, {
+                    type: 'peer-joined',
+                    author: p.name,
+                    message: `${p.name} came online`,
+                });
+            }
+        }
+        // Detect leaves
+        for (const p of instance.status.peers) {
+            if (!newPeerNames.has(p.name) && p.name !== clientName) {
+                addActivity(instance, {
+                    type: 'peer-left',
+                    author: p.name,
+                    message: `${p.name} went offline`,
+                });
+            }
+        }
+
+        instance.status.peers = peers;
+        emitStatuses();
     });
 }
 
@@ -288,6 +378,12 @@ function startWatcher(instance: ProjectInstance): void {
         delete instance.fileVersions[relPath];
         instance.socket?.emit('file:delete', { file: relPath, author: getClientName() });
         instance.status.trackedFiles = instance.fileContents.size;
+        addActivity(instance, {
+            type: 'file-deleted',
+            file: relPath,
+            author: getClientName(),
+            message: `You deleted ${relPath}`,
+        });
         emitStatuses();
     });
 
@@ -334,6 +430,12 @@ function processChange(instance: ProjectInstance, filepath: string, relPath: str
         instance.fileVersions[relPath] = newHash;
         instance.status.lastSync = Date.now();
         instance.status.syncing = true;
+        addActivity(instance, {
+            type: 'sync',
+            file: relPath,
+            author: getClientName(),
+            message: `You changed ${relPath}`,
+        });
         emitStatuses();
 
         setTimeout(() => {
@@ -384,6 +486,18 @@ function applyFullFile(instance: ProjectInstance, file: string, content: string)
 
 function hashContent(content: string): string {
     return crypto.createHash('sha256').update(content, 'utf8').digest('hex').slice(0, 16);
+}
+
+function addActivity(instance: ProjectInstance, entry: Omit<ActivityEntry, 'id' | 'timestamp'>): void {
+    instance.status.activityLog.unshift({
+        ...entry,
+        id: crypto.randomUUID(),
+        timestamp: Date.now(),
+    });
+    // Keep only the latest entries
+    if (instance.status.activityLog.length > MAX_ACTIVITY_LOG) {
+        instance.status.activityLog = instance.status.activityLog.slice(0, MAX_ACTIVITY_LOG);
+    }
 }
 
 function emitStatuses(): void {

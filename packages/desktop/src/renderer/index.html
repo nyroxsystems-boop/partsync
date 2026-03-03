@@ -28,6 +28,12 @@
                         <line x1="1" y1="1" x2="7" y2="1" stroke="currentColor" stroke-width="1.5" />
                     </svg>
                 </button>
+                <button class="titlebar-btn maximize" id="winMaximize" title="Zoom">
+                    <svg width="8" height="8" viewBox="0 0 8 8">
+                        <polygon points="1,3 4,0.5 7,3" fill="currentColor" />
+                        <rect x="2" y="3.5" width="4" height="3" rx="0.5" fill="currentColor" />
+                    </svg>
+                </button>
             </div>
             <div class="titlebar-drag"></div>
         </div>
@@ -46,6 +52,13 @@
             </div>
         </header>
 
+        <!-- ─── Tab Bar ────────────────────────────────────────────── -->
+        <div class="tab-bar" id="tabBar">
+            <button class="tab active" data-tab="projects" id="tabProjects">📁 Projects</button>
+            <button class="tab" data-tab="activity" id="tabActivity">📋 Activity</button>
+            <button class="tab" data-tab="settings" id="tabSettings">⚙️ Settings</button>
+        </div>
+
         <!-- ─── View: Project List ─────────────────────────────────── -->
         <div class="view" id="viewList">
             <!-- Client name bar -->
@@ -53,6 +66,12 @@
                 <span class="client-label">👤</span>
                 <span class="client-name" id="clientNameDisplay">Loading...</span>
                 <button class="btn-icon" id="editNameBtn" title="Edit name">✏️</button>
+            </div>
+
+            <!-- Online Peers -->
+            <div class="peers-bar hidden" id="peersBar">
+                <span class="peers-label">🟢 Online:</span>
+                <div class="peers-list" id="peersList"></div>
             </div>
 
             <!-- Projects -->
@@ -67,10 +86,20 @@
                 </div>
             </div>
 
+            <!-- Conflict Banner -->
+            <div class="conflict-banner hidden" id="conflictBanner">
+                <span class="conflict-icon">⚠️</span>
+                <span class="conflict-text" id="conflictText">Conflicts detected</span>
+                <button class="btn-sm conflict-resolve-btn" id="showConflictsBtn">Resolve</button>
+            </div>
+
             <!-- Actions -->
             <div class="actions" id="actionBar">
                 <button class="btn btn-primary" id="addProject">
                     <span>➕</span> Add Project
+                </button>
+                <button class="btn btn-accent" id="joinProjectBtn">
+                    <span>🔗</span> Join
                 </button>
                 <button class="btn btn-ghost" id="openDashboard">
                     <span>🌐</span> Dashboard
@@ -82,6 +111,60 @@
             </footer>
         </div>
 
+        <!-- ─── View: Activity Log ─────────────────────────────────── -->
+        <div class="view hidden" id="viewActivity">
+            <div class="activity-log" id="activityLog">
+                <div class="empty-state" id="activityEmpty">
+                    <div class="empty-icon">📋</div>
+                    <p class="empty-title">No activity yet</p>
+                    <p class="empty-hint">File changes, syncs, and team activity<br>will appear here.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- ─── View: Settings ─────────────────────────────────────── -->
+        <div class="view hidden" id="viewSettings">
+            <div class="settings-content">
+                <div class="settings-section">
+                    <h3 class="settings-section-title">General</h3>
+                    <label class="settings-toggle">
+                        <span class="settings-toggle-label">Auto-Launch on Login</span>
+                        <input type="checkbox" id="settingAutoLaunch" class="toggle-input">
+                        <span class="toggle-switch"></span>
+                    </label>
+                    <label class="settings-toggle">
+                        <span class="settings-toggle-label">Desktop Notifications</span>
+                        <input type="checkbox" id="settingNotifications" class="toggle-input">
+                        <span class="toggle-switch"></span>
+                    </label>
+                </div>
+
+                <div class="settings-section">
+                    <h3 class="settings-section-title">Your Name</h3>
+                    <div class="settings-name-row">
+                        <input class="form-input" type="text" id="settingsNameInput" placeholder="Your name">
+                        <button class="btn btn-primary btn-settings-save" id="settingsSaveNameBtn">Save</button>
+                    </div>
+                </div>
+
+                <div class="settings-section" id="ignoreSection">
+                    <h3 class="settings-section-title">Ignore Patterns</h3>
+                    <p class="settings-hint">One pattern per line. Changes apply to all projects.</p>
+                    <textarea class="form-input form-textarea" id="ignorePatternsInput" rows="5"
+                        placeholder="**/node_modules/**&#10;**/.git/**&#10;**/dist/**"></textarea>
+                    <button class="btn btn-primary btn-settings-save" id="saveIgnoreBtn">Save Patterns</button>
+                </div>
+
+                <div class="settings-section">
+                    <h3 class="settings-section-title">About</h3>
+                    <div class="about-info">
+                        <span class="about-name">⚡ PartSync v1.0.0</span>
+                        <span class="about-author">by NyroxSystems</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <!-- ─── View: Add/Edit Project ─────────────────────────────── -->
         <div class="view hidden" id="viewAddProject">
             <div class="form-header">
@@ -90,20 +173,17 @@
             </div>
 
             <form class="form" id="addProjectForm">
-                <!-- Your Name -->
                 <div class="form-group">
                     <label class="form-label" for="inputName">Your Name</label>
                     <input class="form-input" type="text" id="inputName" placeholder="e.g. Aaron" required>
                     <span class="form-hint">Other people will see this name</span>
                 </div>
 
-                <!-- Project Name -->
                 <div class="form-group">
                     <label class="form-label" for="inputProjectName">Project Name</label>
                     <input class="form-input" type="text" id="inputProjectName" placeholder="e.g. my-app" required>
                 </div>
 
-                <!-- Folder Picker -->
                 <div class="form-group">
                     <label class="form-label">Project Folder</label>
                     <div class="folder-picker">
@@ -114,7 +194,6 @@
                     </div>
                 </div>
 
-                <!-- Server URL -->
                 <div class="form-group">
                     <label class="form-label" for="inputServer">Server URL</label>
                     <input class="form-input font-mono" type="url" id="inputServer"
@@ -122,7 +201,6 @@
                     <span class="form-hint">Leave as-is unless you host your own server</span>
                 </div>
 
-                <!-- Submit -->
                 <button type="submit" class="btn btn-primary btn-large" id="saveProjectBtn">
                     🚀 Start Syncing
                 </button>
@@ -144,6 +222,48 @@
                 </div>
                 <button type="submit" class="btn btn-primary btn-large">💾 Save</button>
             </form>
+        </div>
+
+        <!-- ─── View: Join Project (Invite Code) ───────────────────── -->
+        <div class="view hidden" id="viewJoinProject">
+            <div class="form-header">
+                <button class="btn-back" id="backFromJoinBtn">← Back</button>
+                <h2 class="form-title">Join Project</h2>
+            </div>
+            <form class="form" id="joinProjectForm">
+                <div class="join-hero">
+                    <div class="join-hero-icon">🔗</div>
+                    <p class="join-hero-text">Paste the invite code your<br>colleague shared with you</p>
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="inviteCodeInput">Invite Code</label>
+                    <textarea class="form-input form-textarea" id="inviteCodeInput"
+                        placeholder="Paste invite code here..." rows="3" required></textarea>
+                    <span class="form-hint">Your colleague can find this under "📤 Share" on their project</span>
+                </div>
+                <button type="submit" class="btn btn-primary btn-large">🚀 Join & Sync</button>
+                <div class="form-error hidden" id="joinFormError"></div>
+            </form>
+        </div>
+
+        <!-- ─── View: Conflict Resolution ──────────────────────────── -->
+        <div class="view hidden" id="viewConflicts">
+            <div class="form-header">
+                <button class="btn-back" id="backFromConflictsBtn">← Back</button>
+                <h2 class="form-title">Resolve Conflicts</h2>
+            </div>
+            <div class="conflicts-list" id="conflictsList">
+                <div class="empty-state" id="conflictsEmpty">
+                    <div class="empty-icon">✅</div>
+                    <p class="empty-title">No conflicts</p>
+                    <p class="empty-hint">All files are in sync!</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- ─── Toast ──────────────────────────────────────────────── -->
+        <div class="toast hidden" id="toast">
+            <span id="toastMessage">Copied!</span>
         </div>
     </div>
 

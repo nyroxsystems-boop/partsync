@@ -24,6 +24,14 @@ contextBridge.exposeInMainWorld('partsync', {
     getConfig: () => ipcRenderer.invoke('get-config'),
     setClientName: (name: string) => ipcRenderer.invoke('set-client-name', name),
 
+    // Settings
+    updateSettings: (settings: {
+        autoLaunch?: boolean;
+        notifications?: boolean;
+    }) => ipcRenderer.invoke('update-settings', settings),
+    updateIgnorePatterns: (projectId: string, patterns: string[]) =>
+        ipcRenderer.invoke('update-ignore-patterns', projectId, patterns),
+
     // Actions
     openDashboard: () => ipcRenderer.invoke('open-dashboard'),
     quit: () => ipcRenderer.invoke('quit'),
@@ -31,5 +39,13 @@ contextBridge.exposeInMainWorld('partsync', {
     // Window controls
     closeWindow: () => ipcRenderer.invoke('close-window'),
     minimizeWindow: () => ipcRenderer.invoke('minimize-window'),
-});
+    maximizeWindow: () => ipcRenderer.invoke('maximize-window'),
 
+    // Share / Invite
+    getShareInfo: (projectId: string) => ipcRenderer.invoke('get-share-info', projectId),
+    joinProject: (inviteCode: string) => ipcRenderer.invoke('join-project', inviteCode),
+
+    // Conflict resolution
+    resolveConflict: (projectId: string, file: string, resolution: string) =>
+        ipcRenderer.invoke('resolve-conflict', projectId, file, resolution),
+});

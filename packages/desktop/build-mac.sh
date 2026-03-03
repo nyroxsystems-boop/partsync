@@ -108,8 +108,7 @@ cat > "$APP_DIR/Contents/Info.plist" << 'PLIST'
     <string>icon</string>
     <key>CFBundleIconName</key>
     <string>icon</string>
-    <key>LSUIElement</key>
-    <true/>
+    <!-- LSUIElement removed: app now shows in Dock for direct launch -->
     <key>NSHighResolutionCapable</key>
     <true/>
     <key>NSSupportsAutomaticGraphicsSwitching</key>

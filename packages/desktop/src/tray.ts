@@ -150,12 +150,10 @@ function togglePopup(): void {
         height: 580,
         minWidth: 360,
         minHeight: 400,
-        maxWidth: 800,
-        maxHeight: 900,
         show: false,
         frame: false,
         resizable: true,
-        fullscreenable: false,
+        fullscreenable: true,
         transparent: true,
         vibrancy: 'popover',
         titleBarStyle: 'hidden',
@@ -184,6 +182,7 @@ function togglePopup(): void {
     const { ipcMain } = require('electron');
     ipcMain.removeHandler('close-window');
     ipcMain.removeHandler('minimize-window');
+    ipcMain.removeHandler('maximize-window');
     ipcMain.handle('close-window', () => {
         if (popupWindow && !popupWindow.isDestroyed()) {
             popupWindow.close();
@@ -193,6 +192,15 @@ function togglePopup(): void {
     ipcMain.handle('minimize-window', () => {
         if (popupWindow && !popupWindow.isDestroyed()) {
             popupWindow.minimize();
+        }
+    });
+    ipcMain.handle('maximize-window', () => {
+        if (popupWindow && !popupWindow.isDestroyed()) {
+            if (popupWindow.isMaximized()) {
+                popupWindow.unmaximize();
+            } else {
+                popupWindow.maximize();
+            }
         }
     });
 }

@@ -73,5 +73,17 @@ export function getNotificationsEnabled(): boolean {
     return store.get('notifications');
 }
 
+export function setNotificationsEnabled(enabled: boolean): void {
+    store.set('notifications', enabled);
+}
+
+export function getTheme(): 'dark' | 'light' {
+    return store.get('theme');
+}
+
+export function setTheme(theme: 'dark' | 'light'): void {
+    store.set('theme', theme);
+}
+
 export type { ProjectConfig, AppConfig };
 export { store };

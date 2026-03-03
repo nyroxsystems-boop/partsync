@@ -52,6 +52,13 @@ export interface ConflictEvent {
     resolved: boolean;
 }
 
+export interface PeerInfo {
+    id: string;
+    name: string;
+    connectedSince: number;
+    lastActivity: number;
+}
+
 export interface DashboardState {
     connectedClients: Array<{
         id: string;
@@ -82,6 +89,7 @@ export interface ClientToServerEvents {
     'sync:full-file': (data: { file: string; content: string; hash: string }) => void;
     'dashboard:subscribe': () => void;
     'diff:undo': (data: { file: string; diffId: number }) => void;
+    'conflict:resolve': (data: { file: string; resolution: 'accept-mine' | 'accept-theirs' }) => void;
 }
 
 export interface ServerToClientEvents {
@@ -92,4 +100,5 @@ export interface ServerToClientEvents {
     'file:rename': (data: { oldFile: string; newFile: string; author: string }) => void;
     'dashboard:state': (state: DashboardState) => void;
     'sync:apply-full-file': (data: { file: string; content: string; hash: string }) => void;
+    'peers:update': (peers: PeerInfo[]) => void;
 }

@@ -9,6 +9,7 @@ import {
     DashboardState,
     SyncHandshake,
     SyncHandshakeResponse,
+    PeerInfo,
     DASHBOARD_UPDATE_INTERVAL_MS,
 } from '@partsync/shared';
 import * as lockManager from './lockManager';
@@ -54,6 +55,9 @@ export function registerSocketHandlers(io: TypedServer): void {
             connectedSince: Date.now(),
             lastActivity: Date.now(),
         });
+
+        // Broadcast updated peers list to all clients
+        broadcastPeers(io);
 
         // ── File Diff ──────────────────────────────────────────────────────
         socket.on('file:diff', (diff: FileDiff) => {
@@ -184,6 +188,14 @@ export function registerSocketHandlers(io: TypedServer): void {
             }
         });
 
+        // ── Conflict Resolution ──────────────────────────────────────────
+        socket.on('conflict:resolve', (data) => {
+            updateActivity(socket.id);
+            console.log(`[WS] Conflict resolved on ${data.file}: ${data.resolution} by ${clientName}`);
+            // In a real implementation, we'd apply the chosen version
+            // For now, just log and broadcast the resolution
+        });
+
         // ── Disconnect ────────────────────────────────────────────────────
         socket.on('disconnect', () => {
             console.log(`[WS] Client disconnected: ${clientName} (${socket.id})`);
@@ -194,6 +206,8 @@ export function registerSocketHandlers(io: TypedServer): void {
                 console.log(`[WS] Released ${released.length} locks for ${clientName}`);
                 broadcastLocks(io);
             }
+            // Broadcast updated peers list
+            broadcastPeers(io);
         });
     });
 }
@@ -206,6 +220,16 @@ function updateActivity(socketId: string): void {
 function broadcastLocks(io: TypedServer): void {
     const locks = lockManager.getAllLocks();
     io.emit('file:lock-changed', locks);
+}
+
+function broadcastPeers(io: TypedServer): void {
+    const peers: PeerInfo[] = Array.from(connectedClients.values()).map(c => ({
+        id: c.id,
+        name: c.name,
+        connectedSince: c.connectedSince,
+        lastActivity: c.lastActivity,
+    }));
+    io.emit('peers:update', peers);
 }
 
 function emitDashboardState(io: TypedServer, socket?: TypedSocket): void {
