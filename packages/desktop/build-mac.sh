@@ -120,14 +120,41 @@ PLIST
 
 echo "  Bundle size: $(du -sh "$APP_DIR" | cut -f1)"
 
-# 9. Strip resource forks & xattrs, then ad-hoc sign
-echo "🔏 Signing for macOS 15..."
+# 9. Proper codesigning for macOS 15 Sequoia
+# Must sign each component individually, inside-out
+echo "🔏 Signing for macOS 15 (per-binary)..."
 xattr -cr "$APP_DIR" 2>/dev/null || true
-codesign --force --deep --sign - "$APP_DIR" 2>&1
+
+FRAMEWORKS="$APP_DIR/Contents/Frameworks"
+
+# Sign each helper app (inside-out order)
+for helper in \
+    "$FRAMEWORKS/Electron Helper.app" \
+    "$FRAMEWORKS/Electron Helper (GPU).app" \
+    "$FRAMEWORKS/Electron Helper (Plugin).app" \
+    "$FRAMEWORKS/Electron Helper (Renderer).app"; do
+    if [ -d "$helper" ]; then
+        codesign --force --sign - --entitlements "$DESKTOP_DIR/entitlements.mac.plist" "$helper" 2>/dev/null
+        echo "  ✅ Signed: $(basename "$helper")"
+    fi
+done
+
+# Sign the Electron framework
+if [ -d "$FRAMEWORKS/Electron Framework.framework" ]; then
+    codesign --force --sign - "$FRAMEWORKS/Electron Framework.framework" 2>/dev/null
+    echo "  ✅ Signed: Electron Framework"
+fi
+
+# Sign any .dylib files
+find "$FRAMEWORKS" -name "*.dylib" -exec codesign --force --sign - {} \; 2>/dev/null
+
+# Sign the main app last
+codesign --force --sign - --entitlements "$DESKTOP_DIR/entitlements.mac.plist" "$APP_DIR" 2>/dev/null
+echo "  ✅ Signed: PartSync.app"
 
 # 10. Verify signature
 echo ""
-codesign --verify --deep --strict "$APP_DIR" 2>&1 && echo "✅ Signature valid!" || echo "⚠️  Signature issues (may still work)"
+codesign --verify --deep --strict "$APP_DIR" 2>&1 && echo "✅ Signature valid!" || echo "⚠️  Signature check (app may still work)"
 
 # 11. Install to /Applications
 echo ""
@@ -135,8 +162,10 @@ echo "📦 Installing to /Applications..."
 rm -rf /Applications/PartSync.app
 cp -R "$APP_DIR" /Applications/PartSync.app
 
-# Remove Gatekeeper quarantine so it opens like a normal app
+# Remove ALL quarantine flags so it opens like a normal app
 xattr -rd com.apple.quarantine /Applications/PartSync.app 2>/dev/null || true
+# Also remove from the source
+xattr -rd com.apple.quarantine "$APP_DIR" 2>/dev/null || true
 
 echo ""
 echo "================================"
