@@ -68,14 +68,23 @@ cp -R "$ELECTRON_APP" "$APP_DIR"
 # Rename binary
 mv "$APP_DIR/Contents/MacOS/Electron" "$APP_DIR/Contents/MacOS/PartSync"
 
-# Remove default app
+# Remove default app + default icon
 rm -rf "$APP_DIR/Contents/Resources/default_app.asar"
+rm -f "$APP_DIR/Contents/Resources/electron.icns"
 
 # Insert our app code
 cp -r "$BUILD_DIR" "$APP_DIR/Contents/Resources/app"
 rm -f "$APP_DIR/Contents/Resources/app/package-lock.json"
 
-# Custom Info.plist
+# Copy custom icon
+if [ -f "$DESKTOP_DIR/assets/icon.icns" ]; then
+    cp "$DESKTOP_DIR/assets/icon.icns" "$APP_DIR/Contents/Resources/icon.icns"
+    echo "  ✅ Custom icon installed"
+else
+    echo "  ⚠️  No icon.icns found, using default"
+fi
+
+# Custom Info.plist with icon
 cat > "$APP_DIR/Contents/Info.plist" << 'PLIST'
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -95,9 +104,15 @@ cat > "$APP_DIR/Contents/Info.plist" << 'PLIST'
     <string>1.0.0</string>
     <key>CFBundlePackageType</key>
     <string>APPL</string>
+    <key>CFBundleIconFile</key>
+    <string>icon</string>
+    <key>CFBundleIconName</key>
+    <string>icon</string>
     <key>LSUIElement</key>
     <true/>
     <key>NSHighResolutionCapable</key>
+    <true/>
+    <key>NSSupportsAutomaticGraphicsSwitching</key>
     <true/>
 </dict>
 </plist>
@@ -114,11 +129,17 @@ codesign --force --deep --sign - "$APP_DIR" 2>&1
 echo ""
 codesign --verify --deep --strict "$APP_DIR" 2>&1 && echo "✅ Signature valid!" || echo "⚠️  Signature issues (may still work)"
 
+# 11. Install to /Applications
+echo ""
+echo "📦 Installing to /Applications..."
+rm -rf /Applications/PartSync.app
+cp -R "$APP_DIR" /Applications/PartSync.app
+
+# Remove Gatekeeper quarantine so it opens like a normal app
+xattr -rd com.apple.quarantine /Applications/PartSync.app 2>/dev/null || true
+
 echo ""
 echo "================================"
-echo "✅ PartSync.app built at:"
-echo "   $APP_DIR"
-echo ""
-echo "To test:    $APP_DIR/Contents/MacOS/PartSync"
-echo "To install: cp -r '$APP_DIR' /Applications/"
+echo "✅ PartSync.app installed to /Applications/"
+echo "   Just double-click to open!"
 echo "🎉 Done!"
