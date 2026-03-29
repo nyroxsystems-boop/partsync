@@ -25,17 +25,16 @@ if (!gotTheLock) {
     app.quit();
 } else {
     app.on('second-instance', () => {
+        // User double-clicked the app again — bring window to front
         showPopup();
+        if (app.dock) app.dock.show();
     });
 }
 
 // ─── App Lifecycle ───────────────────────────────────────────────────────────
 
 app.whenReady().then(() => {
-    // Hide dock icon (menu bar app only)
-    if (app.dock) app.dock.hide();
-
-    // Create tray
+    // Create tray (menu bar icon)
     createTray();
 
     // Start all enabled projects
@@ -46,17 +45,19 @@ app.whenReady().then(() => {
         }
     }
 
-    // Show welcome notification + open popup on first launch
+    // Always show the main window on launch so double-click feels responsive
+    setTimeout(() => showPopup(), 500);
+
+    // Show welcome notification on first launch
     if (projects.length === 0) {
         try {
             new Notification({
                 title: '⚡ PartSync',
-                body: 'Click the menu bar icon to set up your first project!',
+                body: 'Set up your first project to get started!',
             }).show();
         } catch (e) {
             console.log('[PartSync] Notification not available:', e);
         }
-        setTimeout(() => showPopup(), 800);
     }
 
     console.log(`[PartSync] Desktop app ready, ${projects.length} projects configured`);

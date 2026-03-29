@@ -10,6 +10,9 @@ import {
     SyncHandshake,
     SyncHandshakeResponse,
     PeerInfo,
+    EcosystemProject,
+    EcosystemOwnerState,
+    EcosystemMergedState,
     DASHBOARD_UPDATE_INTERVAL_MS,
 } from '@partsync/shared';
 import * as lockManager from './lockManager';
@@ -30,6 +33,45 @@ interface ClientInfo {
 const connectedClients = new Map<string, ClientInfo>();
 const dashboardSockets = new Set<string>();
 let dashboardInterval: NodeJS.Timeout | undefined;
+
+// ── Ecosystem Dashboard Sync State ──
+const ecosystemState = new Map<string, EcosystemOwnerState>();
+const ecosystemDashboards = new Set<string>();
+
+function getEcosystemMergedState(): EcosystemMergedState {
+    // Merge all owners' projects, dedup by project.id (newest lastActivity wins)
+    const projectMap = new Map<string, EcosystemProject>();
+    const owners: EcosystemMergedState['owners'] = [];
+
+    for (const [ownerName, ownerState] of ecosystemState) {
+        owners.push({
+            name: ownerName,
+            color: ownerState.ownerColor,
+            projectCount: ownerState.projects.length,
+            online: (Date.now() - ownerState.lastSeen) < 120_000, // 2min timeout
+        });
+
+        for (const project of ownerState.projects) {
+            const existing = projectMap.get(project.id);
+            if (!existing) {
+                projectMap.set(project.id, project);
+            } else {
+                // Dedup: keep the one with the newest lastActivity
+                const existDate = new Date(existing.lastActivity).getTime();
+                const newDate = new Date(project.lastActivity).getTime();
+                if (newDate > existDate) {
+                    projectMap.set(project.id, project);
+                }
+            }
+        }
+    }
+
+    return {
+        owners,
+        projects: Array.from(projectMap.values()),
+        totalOwners: owners.length,
+    };
+}
 
 export function registerSocketHandlers(io: TypedServer): void {
     // Start dashboard broadcast loop
@@ -196,11 +238,38 @@ export function registerSocketHandlers(io: TypedServer): void {
             // For now, just log and broadcast the resolution
         });
 
+        // ── Ecosystem Dashboard Sync ─────────────────────────────────────
+        socket.on('ecosystem:push', (data) => {
+            console.log(`[Ecosystem] Push from ${data.owner}: ${data.projects.length} projects`);
+            ecosystemState.set(data.owner, {
+                owner: data.owner,
+                ownerColor: data.ownerColor,
+                projects: data.projects,
+                lastSeen: Date.now(),
+                socketId: socket.id,
+            });
+            // Broadcast merged state to ALL connected ecosystem dashboards
+            const merged = getEcosystemMergedState();
+            for (const sid of ecosystemDashboards) {
+                if (sid !== socket.id) {
+                    io.to(sid).emit('ecosystem:state', merged);
+                }
+            }
+        });
+
+        socket.on('ecosystem:subscribe', () => {
+            ecosystemDashboards.add(socket.id);
+            console.log(`[Ecosystem] Dashboard subscribed: ${socket.id}`);
+            // Send current merged state immediately
+            socket.emit('ecosystem:state', getEcosystemMergedState());
+        });
+
         // ── Disconnect ────────────────────────────────────────────────────
         socket.on('disconnect', () => {
             console.log(`[WS] Client disconnected: ${clientName} (${socket.id})`);
             connectedClients.delete(socket.id);
             dashboardSockets.delete(socket.id);
+            ecosystemDashboards.delete(socket.id);
             const released = lockManager.releaseAllLocksForClient(clientName, socket.id);
             if (released.length > 0) {
                 console.log(`[WS] Released ${released.length} locks for ${clientName}`);

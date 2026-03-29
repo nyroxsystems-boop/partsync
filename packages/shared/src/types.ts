@@ -77,6 +77,50 @@ export interface DashboardState {
     };
 }
 
+// ─── Ecosystem Dashboard Sync Types ─────────────────────────────────────────
+
+export interface EcosystemProject {
+    id: string;
+    name: string;
+    icon: string;
+    color: string;
+    category: string;
+    status: string;
+    statusLabel: string;
+    description: string;
+    longDescription: string;
+    tech: string[];
+    deployUrl: string | null;
+    githubUrl: string | null;
+    platform: string;
+    region: string;
+    localPath: string | null;
+    phases: { completed: number; total: number };
+    features: string[];
+    lastActivity: string;
+    lastCommit: string | null;
+    linesOfCode: number;
+    tests: number;
+    healthEndpoint: string | null;
+    healthStatus: any;
+    _owner: string;
+    _ownerColor: string;
+}
+
+export interface EcosystemOwnerState {
+    owner: string;
+    ownerColor: string;
+    projects: EcosystemProject[];
+    lastSeen: number;
+    socketId: string;
+}
+
+export interface EcosystemMergedState {
+    owners: Array<{ name: string; color: string; projectCount: number; online: boolean }>;
+    projects: EcosystemProject[];
+    totalOwners: number;
+}
+
 // ─── Socket.IO Event Maps ───────────────────────────────────────────────────
 
 export interface ClientToServerEvents {
@@ -90,6 +134,8 @@ export interface ClientToServerEvents {
     'dashboard:subscribe': () => void;
     'diff:undo': (data: { file: string; diffId: number }) => void;
     'conflict:resolve': (data: { file: string; resolution: 'accept-mine' | 'accept-theirs' }) => void;
+    'ecosystem:push': (data: { owner: string; ownerColor: string; projects: EcosystemProject[] }) => void;
+    'ecosystem:subscribe': () => void;
 }
 
 export interface ServerToClientEvents {
@@ -101,4 +147,5 @@ export interface ServerToClientEvents {
     'dashboard:state': (state: DashboardState) => void;
     'sync:apply-full-file': (data: { file: string; content: string; hash: string }) => void;
     'peers:update': (peers: PeerInfo[]) => void;
+    'ecosystem:state': (state: EcosystemMergedState) => void;
 }
